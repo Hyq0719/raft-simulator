@@ -10,8 +10,8 @@ var makeState = function(initial) {
   var maxTime = 0;
   var timers = [];
   var prev = function(time) {
-      return util.greatestLower(checkpoints,
-                                function(m) { return m.time > time; });
+    return util.greatestLower(checkpoints,
+        function(m) { return m.time > time; });
   };
   var runTimers = function(time) {
     var fire = [];
