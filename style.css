@@ -13,24 +13,32 @@ body {
 .tooltip.top {
   padding: 9px 0;
 }
+
 .tooltip.top .tooltip-arrow {
   margin-left: -10px;
   border-width: 10px 10px 0;
 }
 
 textarea#title {
- width: 100%;
- max-height: 3.1ex;
- font-weight: bold;
- margin-top: 10px;
+  width: 100%;
+  max-height: 3.1ex;
+  font-weight: bold;
+  margin-top: 10px;
 }
 
 svg a:hover {
   cursor: pointer;
 }
 
-svg #ring, svg #logsbg {
+svg #logsbg {
   fill: #eeeeee;
+}
+
+svg #ring {
+  fill: white; /* Changes the fill color to white */
+  stroke: #cccccc; /* Sets the border color to light gray */
+  stroke-dasharray: 5, 5; /* Creates a dashed line pattern */
+  stroke-width: 2; /* Sets the width of the stroke */
 }
 
 svg .server {
@@ -63,8 +71,7 @@ svg .server a,
 svg .server a:active,
 svg .server a:hover,
 svg .server a:focus,
-svg .server a:visited
-{
+svg .server a:visited {
   font-size: inherit;
   text-decoration: none;
 }
@@ -89,13 +96,13 @@ svg .message {
 }
 
 svg .message.RequestVote {
-  fill:   #66c2a5;
+  fill: #66c2a5;
   stroke: #66c2a5;
 }
 
 svg .message.AppendEntries {
-  fill:   #fc8d62;
-  stroke: #fc8d62;
+  fill: rgba(6, 243, 92, 0.94);
+  stroke: rgba(6, 243, 92, 0.94);
 }
 
 svg .message.request circle {
@@ -119,7 +126,7 @@ svg .log {
 
 svg .entry rect {
   fill: none;
-  stroke: black;
+  stroke: gray;
   stroke-width: 3;
 }
 
@@ -136,17 +143,18 @@ svg .entry text {
 }
 
 svg #pause.paused {
-  fill:white;
+  fill: none;
 }
 
 svg #pause.resumed {
-  fill:none;
+  fill: none;
 }
 
 @media (min-width: 768px) {
   #modal-details .modal-body .dl-horizontal dt {
     width: 100px;
   }
+
   .dl-horizontal dd {
     margin-left: 120px;
   }
@@ -156,11 +164,12 @@ svg #pause.resumed {
 .slider-track {
   background-image: linear-gradient(to bottom, #c3c3c3 0%, #efefef 100%);
 }
+
 .slider-selection {
   background-image: linear-gradient(to bottom, #efefef 0%, #c3c3c3 100%);
 }
 
-a#time-button  {
+a#time-button {
   color: inherit;
 }
 
@@ -183,7 +192,7 @@ a#time-button  {
 
 
 .slide ul {
-  font-size:20pt;
+  font-size: 20pt;
   font-weight: bold;
   line-height: 16pt;
   color: #428bca;
@@ -191,7 +200,7 @@ a#time-button  {
 
 .slide li p {
   font-weight: normal;
-  font-size:16pt;
+  font-size: 16pt;
   color: #333;
   line-height: 1.4;
 }
@@ -203,6 +212,7 @@ a#time-button  {
   line-height: 14pt;
   margin-right: 2px;
 }
+
 .slide blockquote p::after {
   content: "\201D";
   font-weight: bold;
