@@ -336,7 +336,7 @@ $(function () {
     var indexes = SVG('g')
         .attr('id', 'log-indexes');
     logsGroup.append(indexes);
-    for (var index = 1; index <= 10; ++index) {
+    for (var index = 1; index <= 15; ++index) {
       var indexEntrySpec = {
         x: indexSpec.x + (index - 0.5) * indexSpec.width / 11,
         y: indexSpec.y,
@@ -374,7 +374,7 @@ $(function () {
                 x: logSpec.x - LABEL_WIDTH * 4 / 5,
                 y: logSpec.y + logSpec.height / 2
               }));
-      for (var index = 1; index <= 10; ++index) {
+      for (var index = 1; index <= 15; ++index) {
         log.append(SVG('rect')
             .attr(logEntrySpec(index))
             .attr('class', 'log'));
@@ -404,6 +404,40 @@ $(function () {
             .attr('stroke-width', 3));
       }
     });
+    var iconsY = logsSpec.y + logsSpec.height + 50; // 调整Y坐标以放在日志框的下方
+    // 添加"match index"圆点和文本
+    logsGroup.append(SVG('circle')
+        .attr({
+          cx: logsSpec.x + 30,
+          cy: iconsY,
+          r: 5,
+          fill: 'black'
+        }));
+    logsGroup.append(SVG('text')
+        .text(' = Match Index')
+        .attr({
+          x: logsSpec.x + 85,
+          y: iconsY,
+          'font-size': '14px',
+          'font-family': 'Arial'
+        }));
+
+    // 添加"next index"箭头和文本
+    logsGroup.append(SVG('path')
+        .attr({
+          d: 'M ' + (logsSpec.x + 150) + ' ' + (iconsY + 10) + ' l 0 -10',
+          stroke: 'black',
+          'stroke-width': 3, // 加粗箭头
+          'marker-end': 'url(#TriangleOutM)'
+        }));
+    logsGroup.append(SVG('text')
+        .text(' = Next Index')
+        .attr({
+          x: logsSpec.x + 200,
+          y: iconsY,
+          'font-size': '14px',
+          'font-family': 'Arial'
+        }));
   };
 
   render.messages = function (messagesSame) {
@@ -743,7 +777,7 @@ $(function () {
   timeSlider.slider({
     tooltip: 'always',
     formater: function (value) {
-      return (value / 1e6).toFixed(3) + 's';
+      return (value / 1e6).toFixed(2) + 's';
     },
   });
   timeSlider.on('slideStart', function () {
