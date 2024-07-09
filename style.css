@@ -31,7 +31,7 @@ svg a:hover {
 }
 
 svg #logsbg {
-  fill: #eeeeee;
+  fill: white;
 }
 
 svg #ring {
@@ -101,8 +101,8 @@ svg .message.RequestVote {
 }
 
 svg .message.AppendEntries {
-  fill: rgba(6, 243, 92, 0.94);
-  stroke: rgba(6, 243, 92, 0.94);
+  fill:   #fc8d62;
+  stroke: #fc8d62;
 }
 
 svg .message.request circle {
