@@ -1,165 +1,279 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Raft Simulator</title>
-  <link href="bootstrap-3.1.1/css/bootstrap.min.css" rel="stylesheet">
-  <link href="bootstrap-slider/css/bootstrap-slider.css" rel="stylesheet">
-  <script src="jquery/jquery.min.js"></script>
-  <script src="bootstrap-3.1.1/js/bootstrap.min.js"></script>
-  <script src="bootstrap-slider/js/bootstrap-slider.js"></script>
-  <script src="bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
-  <script src="util.js"></script>
-  <script src="raft.js"></script>
-  <script src="state.js"></script>
-  <script src="script.js"></script>
-  <link href="style.css" rel="stylesheet">
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      text-align: center;
-    }
-    .container {
-      width: 80%;
-    }
-    h1 {
-      color: black;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Raft Simulator</title>
+    <link href="bootstrap-3.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="bootstrap-slider/css/bootstrap-slider.css" rel="stylesheet">
+    <script src="jquery/jquery.min.js"></script>
+    <script src="bootstrap-3.1.1/js/bootstrap.min.js"></script>
+    <script src="bootstrap-slider/js/bootstrap-slider.js"></script>
+    <script src="bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
+    <script src="util.js"></script>
+    <script src="raft.js"></script>
+    <script src="state.js"></script>
+    <script src="script.js"></script>
+    <link href="style.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+
+        .container {
+            width: 80%;
+        }
+
+        h1 {
+            color: black;
+        }
+    </style>
 </head>
 <body>
 <h1>Raft Simulator</h1>
 <div class="container">
-  <div class="row" style="margin-top: 20px">
-    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 0px solid black" width="745" height="400">
-      <defs>
-        <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-          <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.4)" />
-        </marker>
-        <marker id="TriangleOutS-RequestVote" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-          <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)" class="message RequestVote" />
-        </marker>
-        <marker id="TriangleOutS-AppendEntries" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-          <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)" class="message AppendEntries" />
-        </marker>
-      </defs>
-      <circle id="ring" />
-      <g id="pause" class="resumed">
-        <rect width="1" height="3" x="-1.25" y="-1.5" />
-        <rect width="1" height="3" x=".25" y="-1.5" />
-      </g>
-      <g id="messages"></g>
-      <g id="servers"></g>
-      <g class="logs"></g>
-    </svg>
-  </div>
-  <div class="row" style="margin-top: 20px">
-    <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-play" style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip" title="Timeline; click to pause/play"></span></a>
-    &nbsp;&nbsp;
-    <input id="time" style="width: 650px" data-slider-id='timeSlider' type="text" data-slider-min="0" data-slider-max="1000" data-slider-step="1" data-slider-value="0" />
-  </div>
-  <div class="row" style="margin-top: 20px">
-    <span id="speed-icon" class="glyphicon glyphicon-fast-forward" style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip" title="Simulation speed"></span>
-    &nbsp;&nbsp;
-    <input id="speed" style="width: 650px"  data-slider-id='speedSlider' type="text" data-slider-min="0" data-slider-max="3" data-slider-step=".01" data-slider-value="1.5" />
-  </div>
-</div>
-
-<div id="modal-details" class="modal" tabindex="-1" data-keyboard="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title"></h4>
-      </div>
-      <div class="modal-body">
-      </div>
-      <div class="modal-footer">
-      </div>
-    </div><!-- /.modal-content -->
-  </div><!-- /.modal-dialog -->
-</div><!-- /.modal -->
-
-<div id="modal-help" class="modal" tabindex="-1" data-keyboard="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title">Keyboard shortcuts</h4>
-      </div>
-      <div class="modal-body">
-        <table class="table">
-          <tr>
-            <td><kbd>&nbsp;</kbd> / <kbd>.</kbd></td>
-            <td>Pause/unpause</td>
-          </tr>
-          <tr>
-            <td><kbd>?</kbd></td>
-            <td>Help</td>
-          </tr>
-          <tr>
-            <td><kbd>C</kbd></td>
-            <td>Submit client request to leader of highest term, if any</td>
-          </tr>
-          <tr>
-            <td><kbd>R</kbd></td>
-            <td>Restart leader of highest term, if any</td>
-          </tr>
-          <tr>
-            <td><kbd>T</kbd></td>
-            <td>Adjust election timers to avoid a split vote</td>
-          </tr>
-          <tr>
-            <td><kbd>A</kbd></td>
-            <td>Align election timers to encourage a split vote</td>
-          </tr>
-          <tr>
-            <td><kbd>L</kbd></td>
-            <td>Set up log replication start scenario</td>
-          </tr>
-          <tr>
-            <td><kbd>B</kbd></td>
-            <td>Resume all servers</td>
-          </tr>
-          <tr>
-            <td><kbd>F</kbd></td>
-            <td>Fork playback, discarding future</td>
-          </tr>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="modal-section" class="modal" tabindex="-1" data-keyboard="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <div class="text-center" style="padding: 200px 0">
-          <h1></h1>
-          <h2></h2>
+    <div class="row">
+        <!-- Network Delays Dropdown with Input Option -->
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-addon">Network Delays:</span>
+                <select class="form-control" id="network-delays" onchange="toggleCustomInput(this, 'custom-network')">
+                    <option value="0ms" selected>0ms</option>
+                    <option value="50ms">50ms</option>
+                    <option value="100ms">100ms</option>
+                    <option value="200ms">200ms</option>
+                    <option value="custom">Custom...</option>
+                </select>
+                <input type="text" id="custom-network" class="form-control" style="display:none;"
+                       placeholder="delay in ms">
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<div id="context-menu">
-  <ul class="dropdown-menu" role="menu">
-  </ul>
+        <!-- Node Failure Frequencies Dropdown with Input Option -->
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-addon">Node Failures:</span>
+                <select class="form-control" id="node-failures"
+                        onchange="toggleCustomInput(this, 'custom-node-failure')">
+                    <option value="0" selected>0 failure per minute</option>
+                    <option value="1">1 failure per minute</option>
+                    <option value="2">2 failure per minute</option>
+                    <option value="5">5 failures per minute</option>
+                    <option value="10">10 failures per minute</option>
+                    <option value="custom">Custom...</option>
+                </select>
+                <input type="text" id="custom-node-failure" class="form-control" style="display:none;"
+                       placeholder="failures per minute">
+            </div>
+        </div>
+
+        <!-- Request Frequencies Dropdown with Input Option -->
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-addon">Request Frequencies:</span>
+                <select class="form-control" id="request-frequencies"
+                        onchange="toggleCustomInput(this, 'custom-request')">
+                    <option value="10" selected>10 requests per minute</option>
+                    <option value="20">20 requests per minute</option>
+                    <option value="30">30 requests per minute</option>
+                    <option value="60">60 requests per minute</option>
+                    <option value="custom">Custom...</option>
+                </select>
+                <input type="text" id="custom-request" class="form-control" style="display:none;"
+                       placeholder="requests per minute">
+            </div>
+        </div>
+    </div>
+    <div class="row" style="margin-top: 20px;">
+        <div class="col-md-12 text-center">
+            <button class="btn btn-primary" onclick="startSimulation()">Start</button>
+            <button class="btn btn-secondary" onclick="resetSettings()">Reset</button>
+        </div>
+    </div>
 </div>
 
 <script>
-  window.addEventListener('beforeunload', function (event) {
-    event.preventDefault();
-    event.returnValue = 'Are you sure you want to leave? Changes you made may not be saved.';
-  });
+    function toggleCustomInput(select, inputId) {
+        var input = document.getElementById(inputId);
+        if (select.value === "custom") {
+            input.style.display = 'block';
+        } else {
+            input.style.display = 'none';
+            input.value = ''; // Clear input when not custom
+        }
+    }
+    function toggleCustomInput(select, inputId) {
+        var input = document.getElementById(inputId);
+        if (select.value === "custom") {
+            input.style.display = 'block';
+        } else {
+            input.style.display = 'none';
+            input.value = ''; // Clear input when not custom
+        }
+    }
+
+    function resetSettings() {
+        // Reset Network Delays
+        document.getElementById('network-delays').value = '0ms';
+        document.getElementById('custom-network').style.display = 'none';
+        document.getElementById('custom-network').value = '';
+
+        // Reset Node Failures
+        document.getElementById('node-failures').value = '0';
+        document.getElementById('custom-node-failure').style.display = 'none';
+        document.getElementById('custom-node-failure').value = '';
+
+        // Reset Request Frequencies
+        document.getElementById('request-frequencies').value = '10';
+        document.getElementById('custom-request').style.display = 'none';
+        document.getElementById('custom-request').value = '';
+    }
+
+    function startSimulation() {
+        // Placeholder for starting the simulation
+        alert('Starting simulation...');
+    }
+</script>
+
+
+<div class="container">
+    <div class="row" style="margin-top: 20px">
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 0px solid black" width="745" height="400">
+            <defs>
+                <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
+                    <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.4)"/>
+                </marker>
+                <marker id="TriangleOutS-RequestVote" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
+                    <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
+                          class="message RequestVote"/>
+                </marker>
+                <marker id="TriangleOutS-AppendEntries" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
+                    <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
+                          class="message AppendEntries"/>
+                </marker>
+            </defs>
+            <circle id="ring"/>
+            <g id="pause" class="resumed">
+                <rect width="1" height="3" x="-1.25" y="-1.5"/>
+                <rect width="1" height="3" x=".25" y="-1.5"/>
+            </g>
+            <g id="messages"></g>
+            <g id="servers"></g>
+            <g class="logs"></g>
+        </svg>
+    </div>
+    <div class="row" style="margin-top: 20px">
+        <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-play"
+                                           style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
+                                           title="Timeline; click to pause/play"></span></a>
+        &nbsp;&nbsp;
+        <input id="time" style="width: 650px" data-slider-id='timeSlider' type="text" data-slider-min="0"
+               data-slider-max="1000" data-slider-step="1" data-slider-value="0"/>
+    </div>
+    <div class="row" style="margin-top: 20px">
+        <span id="speed-icon" class="glyphicon glyphicon-fast-forward" style="font-size: 24pt; vertical-align: middle"
+              data-toggle="tooltip" title="Simulation speed"></span>
+        &nbsp;&nbsp;
+        <input id="speed" style="width: 650px" data-slider-id='speedSlider' type="text" data-slider-min="0"
+               data-slider-max="3" data-slider-step=".01" data-slider-value="1.5"/>
+    </div>
+</div>
+
+<div id="modal-details" class="modal" tabindex="-1" data-keyboard="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title"></h4>
+            </div>
+            <div class="modal-body">
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div id="modal-help" class="modal" tabindex="-1" data-keyboard="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Keyboard shortcuts</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table">
+                    <tr>
+                        <td><kbd>&nbsp;</kbd> / <kbd>.</kbd></td>
+                        <td>Pause/unpause</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>?</kbd></td>
+                        <td>Help</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>C</kbd></td>
+                        <td>Submit client request to leader of highest term, if any</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>R</kbd></td>
+                        <td>Restart leader of highest term, if any</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>T</kbd></td>
+                        <td>Adjust election timers to avoid a split vote</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>A</kbd></td>
+                        <td>Align election timers to encourage a split vote</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>L</kbd></td>
+                        <td>Set up log replication start scenario</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>B</kbd></td>
+                        <td>Resume all servers</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>F</kbd></td>
+                        <td>Fork playback, discarding future</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-section" class="modal" tabindex="-1" data-keyboard="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="text-center" style="padding: 200px 0">
+                    <h1></h1>
+                    <h2></h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="context-menu">
+    <ul class="dropdown-menu" role="menu">
+    </ul>
+</div>
+
+<script>
+    window.addEventListener('beforeunload', function (event) {
+        event.preventDefault();
+        event.returnValue = 'Are you sure you want to leave? Changes you made may not be saved.';
+    });
 </script>
 </body>
 </html>
