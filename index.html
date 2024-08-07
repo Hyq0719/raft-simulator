@@ -32,6 +32,9 @@
         h1 {
             color: black;
         }
+        #speed-bar, #speed {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -39,32 +42,32 @@
 <div class="container">
     <div class="row">
         <!-- Network Delays Dropdown with Input Option -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="input-group">
                 <span class="input-group-addon">Network Delays:</span>
                 <select class="form-control" id="network-delays" onchange="toggleCustomInput(this, 'custom-network')">
-                    <option value="0ms" selected>0ms</option>
-                    <option value="50ms">50ms</option>
-                    <option value="100ms">100ms</option>
-                    <option value="200ms">200ms</option>
+                    <option value="1-2" selected>0 ms</option>
+                    <option value="5-10">5-10 ms</option>
+                    <option value="10-20">10-20 ms</option>
+                    <option value="20-40">20-40 ms</option>
                     <option value="custom">Custom...</option>
                 </select>
                 <input type="text" id="custom-network" class="form-control" style="display:none;"
-                       placeholder="delay in ms">
+                       placeholder="delay in ms, split with -">
             </div>
         </div>
 
         <!-- Node Failure Frequencies Dropdown with Input Option -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="input-group">
-                <span class="input-group-addon">Node Failures:</span>
+                <span class="input-group-addon">Node Failures / min:</span>
                 <select class="form-control" id="node-failures"
                         onchange="toggleCustomInput(this, 'custom-node-failure')">
-                    <option value="0" selected>0 failure per minute</option>
-                    <option value="1">1 failure per minute</option>
-                    <option value="2">2 failure per minute</option>
-                    <option value="5">5 failures per minute</option>
-                    <option value="10">10 failures per minute</option>
+                    <option value="0" selected>0</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="60">60</option>
                     <option value="custom">Custom...</option>
                 </select>
                 <input type="text" id="custom-node-failure" class="form-control" style="display:none;"
@@ -72,16 +75,31 @@
             </div>
         </div>
 
-        <!-- Request Frequencies Dropdown with Input Option -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="input-group">
-                <span class="input-group-addon">Request Frequencies:</span>
+                <span class="input-group-addon">Fault Duration:</span>
+                <select class="form-control" id="fault-duration" onchange="toggleCustomInput(this, 'custom-fault')">
+                    <option value="0" selected>0 ms</option>
+                    <option value="50-100">50-100 ms</option>
+                    <option value="200-400">200-400 ms</option>
+                    <option value="500-1000">500-1000 ms</option>
+                    <option value="custom">Custom...</option>
+                </select>
+                <input type="text" id="custom-fault" class="form-control" style="display:none;"
+                       placeholder="delay in ms, split with -">
+            </div>
+        </div>
+
+        <!-- Request Frequencies Dropdown with Input Option -->
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-addon">Request / min:</span>
                 <select class="form-control" id="request-frequencies"
                         onchange="toggleCustomInput(this, 'custom-request')">
-                    <option value="10" selected>10 requests per minute</option>
-                    <option value="20">20 requests per minute</option>
-                    <option value="30">30 requests per minute</option>
-                    <option value="60">60 requests per minute</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                    <option value="60">60</option>
                     <option value="custom">Custom...</option>
                 </select>
                 <input type="text" id="custom-request" class="form-control" style="display:none;"
@@ -107,21 +125,16 @@
             input.value = ''; // Clear input when not custom
         }
     }
-    function toggleCustomInput(select, inputId) {
-        var input = document.getElementById(inputId);
-        if (select.value === "custom") {
-            input.style.display = 'block';
-        } else {
-            input.style.display = 'none';
-            input.value = ''; // Clear input when not custom
-        }
-    }
 
     function resetSettings() {
         // Reset Network Delays
         document.getElementById('network-delays').value = '0ms';
         document.getElementById('custom-network').style.display = 'none';
         document.getElementById('custom-network').value = '';
+        // Reset Network Delays
+        document.getElementById('fault-duration').value = '0ms';
+        document.getElementById('custom-fault').style.display = 'none';
+        document.getElementById('custom-fault').value = '';
 
         // Reset Node Failures
         document.getElementById('node-failures').value = '0';
@@ -135,8 +148,32 @@
     }
 
     function startSimulation() {
-        // Placeholder for starting the simulation
-        alert('Starting simulation...');
+        var networkDelayRange = getSettingValue('network-delays', 'custom-network').split('-');
+        var nodeFailures = parseInt(getSettingValue('node-failures', 'custom-node-failure'), 10);
+        var faultDurationRange = getSettingValue('fault-duration', 'custom-fault').split('-');
+        var requestRate = parseInt(getSettingValue('request-frequencies', 'custom-request'), 10);
+
+        var config = {
+            rpcMinLatency: parseInt(networkDelayRange[0], 10),
+            rpcMaxLatency: parseInt(networkDelayRange[1] || networkDelayRange[0], 10),
+            nodeFailureRate: nodeFailures,
+            leaderRequestRate: requestRate,
+            minFaultDuration: parseInt(faultDurationRange[0], 10),
+            maxFaultDuration: parseInt(faultDurationRange[1] || faultDurationRange[0], 10)
+        };
+
+        // Call the function defined in script.js
+        window.startSimulationFromConfig(config);
+    }
+
+    function getSettingValue(selectId, inputId) {
+        var select = document.getElementById(selectId);
+        if (select.value === "custom") {
+            var inputValue = document.getElementById(inputId).value;
+            return inputValue ? inputValue : "No custom value provided"; // 防止输入为空
+        } else {
+            return select.value;
+        }
     }
 </script>
 
@@ -175,12 +212,12 @@
         <input id="time" style="width: 650px" data-slider-id='timeSlider' type="text" data-slider-min="0"
                data-slider-max="1000" data-slider-step="1" data-slider-value="0"/>
     </div>
-    <div class="row" style="margin-top: 20px">
+    <div class="row" id="speed-bar" style="margin-top: 20px">
         <span id="speed-icon" class="glyphicon glyphicon-fast-forward" style="font-size: 24pt; vertical-align: middle"
               data-toggle="tooltip" title="Simulation speed"></span>
         &nbsp;&nbsp;
         <input id="speed" style="width: 650px" data-slider-id='speedSlider' type="text" data-slider-min="0"
-               data-slider-max="3" data-slider-step=".01" data-slider-value="1.5"/>
+               data-slider-max="3" data-slider-step=".01" data-slider-value="1"/>
     </div>
 </div>
 

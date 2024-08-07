@@ -15,6 +15,138 @@ var state;
 var record;
 var replay;
 
+var userConfig = {
+  nodeFailureRate: 10,                // 每分钟故障率
+  leaderRequestRate: 30,              // leader每分钟收到的请求数量
+  faultDuration:{min: 10000, max: 20000} // 故障持续时间的最小和最大值
+};
+
+function startSimulationFromConfig(config) {
+  // Update userConfig with the new configuration passed from HTML
+  raft.updateRpcLatency(config.rpcMinLatency*1000,config.rpcMaxLatency*1000)
+  userConfig.nodeFailureRate = config.nodeFailureRate;
+  userConfig.leaderRequestRate = config.leaderRequestRate;
+  userConfig.faultDuration ={ min: config.minFaultDuration, max: config.maxFaultDuration};
+  userConfig.rpcLatency = {min: config.rpcMinLatency*1000, max: config.rpcMaxLatency*1000};
+
+  // Assume you have some initialization or reset function to start the simulation
+  initializeTimers();
+  console.log('Simulation started with new config:', userConfig);
+  playback.toggle();
+}
+
+// Make sure to expose this function to be accessible from the outside
+window.startSimulationFromConfig = startSimulationFromConfig;
+
+var isActive = false; // 全局控制所有定时器的活动状态
+var getLeader = function () {
+  var leader = null;
+  var term = 0;
+  state.current.servers.forEach(function (server) {
+    if (server.state == 'leader' &&
+        server.term > term) {
+      leader = server;
+      term = server.term;
+    }
+  });
+  return leader;
+};
+var timers = {
+  nodeFailures: {
+    id: null,
+    start: function() {
+      if (this.id === null) { // 确保定时器未在运行
+        this.id = setInterval(() => {
+          if (Math.random() < userConfig.nodeFailureRate / 60) {
+            var failedServer = Math.floor(Math.random() * NUM_SERVERS);
+            console.log("Node failure simulated for server", failedServer);
+            if (state && state.current && state.current.servers && raft.stop) {
+              raft.stop(state.current, state.current.servers[failedServer]);
+              var faultDuration = userConfig.faultDuration.min + Math.random() * (userConfig.faultDuration.max - userConfig.faultDuration.min);
+              setTimeout(() => {
+                console.log("Node recovery simulated for server", failedServer);
+                if (raft.restart) {
+                  raft.restart(state.current, state.current.servers[failedServer]);
+                }
+              }, faultDuration);
+            }
+          }
+        }, 1000);
+      }
+    },
+    stop: function() {
+      if (this.id !== null) {
+        clearInterval(this.id);
+        this.id = null;
+      }
+    }
+  },
+  leaderRequests: {
+    id: null,
+    start: function () {
+      if (this.id === null) {
+        // 根据每分钟的请求次数计算请求间隔
+        const requestInterval = 60000 / userConfig.leaderRequestRate;
+
+        this.id = setInterval(() => {
+          // 尝试找到当前的 leader
+          const leader = getLeader(); // 假设有一个函数 getLeader() 返回当前的 leader 或 null
+          if (leader !== null) {
+            console.log("Sending request to leader", leader.id);
+            // 这里调用发送请求的函数
+            raft.clientRequest(state.current, leader);
+          } else {
+            console.log("Leader not found, request failed.");
+            // 可以设置一个短暂的延迟后再次检查 leader 是否存在
+            setTimeout(() => {
+              const leaderRetry = getLeader();
+              if (leaderRetry !== null) {
+                console.log("Sending request to leader after delay", leaderRetry.id);
+                raft.clientRequest(state.current, leaderRetry);
+              } else {
+                console.log("Leader still not found, request definitely failed.");
+              }
+            }, requestInterval / 2); // 例如在间隔的一半时间后再次尝试
+          }
+        }, requestInterval);
+      }
+    },
+    stop: function () {
+      if (this.id !== null) {
+        clearInterval(this.id);
+        this.id = null;
+      }
+    }
+  }
+};
+
+function timerAllResume() {
+  if (isActive) {
+    // 停止所有定时器
+    Object.keys(timers).forEach(timerKey => {
+      timers[timerKey].stop();
+    });
+    isActive = false;
+    console.log("All timers paused.");
+  } else {
+    // 启动所有定时器
+    Object.keys(timers).forEach(timerKey => {
+      timers[timerKey].start();
+    });
+    isActive = true;
+    console.log("All timers resumed.");
+  }
+}
+
+// 初始化所有定时器的函数
+function initializeTimers() {
+  //TODO
+  Object.keys(timers).forEach(timerKey => {
+    timers[timerKey].start();
+  });
+  isActive = true; // 标记为激活状态
+}
+
 $(function () {
 
   var ARC_WIDTH = 5;
@@ -696,6 +828,7 @@ $(function () {
         e.keyCode == 190 /* dot, emitted by Logitech remote */) {
       $('.modal').modal('hide');
       playback.toggle();
+      timerAllResume();
     } else if (e.keyCode == 'C'.charCodeAt(0)) {
       if (leader !== null) {
         state.fork();
@@ -777,7 +910,7 @@ $(function () {
   timeSlider.slider({
     tooltip: 'always',
     formater: function (value) {
-      return (value / 1e6).toFixed(2) + 's';
+      return (value / 1e5).toFixed(2) + 's';
     },
   });
   timeSlider.on('slideStart', function () {
@@ -799,6 +932,7 @@ $(function () {
   $('#time-button')
       .click(function () {
         playback.toggle();
+        timerAllResume();
         return false;
       });
 
@@ -818,5 +952,6 @@ $(function () {
 
   state.init();
   render.update();
+  playback.toggle();
 });
 

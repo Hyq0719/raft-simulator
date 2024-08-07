@@ -15,6 +15,11 @@ var BATCH_SIZE = 1;
 
 (function() {
 
+  raft.updateRpcLatency = function(minLatency, maxLatency) {
+    MIN_RPC_LATENCY = minLatency;
+    MAX_RPC_LATENCY = maxLatency;
+  };
+
   var sendMessage = function(model, message) {
     message.sendTime = model.time;
     message.recvTime = model.time +
@@ -68,6 +73,7 @@ var BATCH_SIZE = 1;
       heartbeatDue: util.makeMap(peers, 0),
     };
   };
+
 
   var stepDown = function(model, server, term) {
     server.term = term;
