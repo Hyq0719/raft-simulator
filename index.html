@@ -32,13 +32,14 @@
         h1 {
             color: black;
         }
+
         #speed-bar, #speed {
             display: none;
         }
     </style>
-</head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script></head>
 <body>
-<h1>Raft Simulator</h1>
+<h1>Raft Consensus Simulator</h1>
 <div class="container">
     <div class="row">
         <!-- Network Delays Dropdown with Input Option -->
@@ -46,10 +47,10 @@
             <div class="input-group">
                 <span class="input-group-addon">Network Delays:</span>
                 <select class="form-control" id="network-delays" onchange="toggleCustomInput(this, 'custom-network')">
-                    <option value="1-2">0 ms</option>
-                    <option value="5-10">5-10 ms</option>
+                    <option value="1-10">1-10ms</option>
                     <option value="10-20">10-20 ms</option>
-                    <option value="20-40"selected>20-40 ms</option>
+                    <option value="20-40" selected>20-40 ms</option>
+                    <option value="40-100">40-100 ms</option>
                     <option value="custom">Custom...</option>
                 </select>
                 <input type="text" id="custom-network" class="form-control" style="display:none;"
@@ -63,11 +64,11 @@
                 <span class="input-group-addon">Node Failures / min:</span>
                 <select class="form-control" id="node-failures"
                         onchange="toggleCustomInput(this, 'custom-node-failure')">
-                    <option value="0" selected>0</option>
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="60">60</option>
+                    <option value="0">0</option>
+                    <option value="5">1</option>
+                    <option value="10" selected>2</option>
+                    <option value="20">4</option>
+                    <option value="60">12</option>
                     <option value="custom">Custom...</option>
                 </select>
                 <input type="text" id="custom-node-failure" class="form-control" style="display:none;"
@@ -79,8 +80,8 @@
             <div class="input-group">
                 <span class="input-group-addon">Fault Duration:</span>
                 <select class="form-control" id="fault-duration" onchange="toggleCustomInput(this, 'custom-fault')">
-                    <option value="0" selected>0 ms</option>
-                    <option value="50-100">50-100 ms</option>
+                    <option value="0">0 ms</option>
+                    <option value="50-100" selected>50-100 ms</option>
                     <option value="200-400">200-400 ms</option>
                     <option value="500-1000">500-1000 ms</option>
                     <option value="custom">Custom...</option>
@@ -96,9 +97,9 @@
                 <span class="input-group-addon">Request / min:</span>
                 <select class="form-control" id="request-frequencies"
                         onchange="toggleCustomInput(this, 'custom-request')">
-                    <option value="10" selected>10</option>
+                    <option value="10">10</option>
                     <option value="20">20</option>
-                    <option value="30">30</option>
+                    <option value="30" selected>30</option>
                     <option value="60">60</option>
                     <option value="custom">Custom...</option>
                 </select>
@@ -108,7 +109,19 @@
         </div>
     </div>
     <div class="row" style="margin-top: 20px;">
-        <div class="col-md-12 text-center">
+
+        <div class="col-md-3 text-center">
+            <div class="input-group">
+                <span class="input-group-addon">Simulation Speed:</span>
+                <select class="form-control" id="simulation-speed">
+                    <option value="1" selected>0.1×</option>
+                    <option value="2">0.01×</option>
+                </select>
+            </div>
+
+        </div>
+        <div class="col-md-9 text-center">
+
             <button class="btn btn-primary" onclick="startSimulation()">Start</button>
             <button class="btn btn-secondary" onclick="resetSettings()">Reset</button>
         </div>
@@ -128,23 +141,25 @@
 
     function resetSettings() {
         // Reset Network Delays
-        document.getElementById('network-delays').value = '0ms';
+        document.getElementById('network-delays').value = '20-40';
         document.getElementById('custom-network').style.display = 'none';
         document.getElementById('custom-network').value = '';
         // Reset Network Delays
-        document.getElementById('fault-duration').value = '0ms';
+        document.getElementById('fault-duration').value = '50-100';
         document.getElementById('custom-fault').style.display = 'none';
         document.getElementById('custom-fault').value = '';
 
         // Reset Node Failures
-        document.getElementById('node-failures').value = '0';
+        document.getElementById('node-failures').value = '10';
         document.getElementById('custom-node-failure').style.display = 'none';
         document.getElementById('custom-node-failure').value = '';
 
         // Reset Request Frequencies
-        document.getElementById('request-frequencies').value = '10';
+        document.getElementById('request-frequencies').value = '30';
         document.getElementById('custom-request').style.display = 'none';
         document.getElementById('custom-request').value = '';
+
+        document.getElementById('simulation-speed').value = '1';
     }
 
     function startSimulation() {
@@ -152,15 +167,20 @@
         var nodeFailures = parseInt(getSettingValue('node-failures', 'custom-node-failure'), 10);
         var faultDurationRange = getSettingValue('fault-duration', 'custom-fault').split('-');
         var requestRate = parseInt(getSettingValue('request-frequencies', 'custom-request'), 10);
+        var simulationSpeed = parseInt(document.getElementById('simulation-speed').value)
 
         var config = {
             rpcMinLatency: parseInt(networkDelayRange[0], 10),
             rpcMaxLatency: parseInt(networkDelayRange[1] || networkDelayRange[0], 10),
-            nodeFailureRate: nodeFailures,
+            nodeFailureRate: nodeFailures * 5,
             leaderRequestRate: requestRate,
             minFaultDuration: parseInt(faultDurationRange[0], 10),
-            maxFaultDuration: parseInt(faultDurationRange[1] || faultDurationRange[0], 10)
+            maxFaultDuration: parseInt(faultDurationRange[1] || faultDurationRange[0], 10),
+            simulationSpeed: simulationSpeed
         };
+        $('#speed').slider('setValue', simulationSpeed);
+
+        window.runSimulation();
 
         // Call the function defined in script.js
         window.startSimulationFromConfig(config);
@@ -180,36 +200,49 @@
 
 <div class="container">
     <div class="row" style="margin-top: 20px">
-        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 0px solid black" width="745" height="400">
-            <defs>
-                <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-                    <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.4)"/>
-                </marker>
-                <marker id="TriangleOutS-RequestVote" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-                    <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
-                          class="message RequestVote"/>
-                </marker>
-                <marker id="TriangleOutS-AppendEntries" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-                    <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
-                          class="message AppendEntries"/>
-                </marker>
-            </defs>
-            <circle id="ring"/>
-            <g id="pause" class="resumed">
-                <rect width="1" height="3" x="-1.25" y="-1.5"/>
-                <rect width="1" height="3" x=".25" y="-1.5"/>
-            </g>
-            <g id="messages"></g>
-            <g id="servers"></g>
-            <g class="logs"></g>
-        </svg>
+        <!-- SVG for non-log elements -->
+        <div style="float: left; width: 40%; margin-left: 10%;">
+            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 0px solid black" width="745"
+                 height="400">
+                <defs>
+                    <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
+                        <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.4)"/>
+                    </marker>
+                    <marker id="TriangleOutS-RequestVote" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
+                        <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
+                              class="message RequestVote"/>
+                    </marker>
+                    <marker id="TriangleOutS-AppendEntries" orient="auto" refX="0.0" refY="0.0"
+                            style="overflow:visible">
+                        <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
+                              class="message AppendEntries"/>
+                    </marker>
+                </defs>
+                <circle id="ring"/>
+                <g id="messages"></g>
+                <g id="servers"></g>
+                <g id="pause" class="resumed">
+                    <rect width="1" height="3" x="-1.25" y="-1.5"/>
+                    <rect width="1" height="3" x=".25" y="-1.5"/>
+                </g>
+            </svg>
+        </div>
+        <!-- Scrollable logs container -->
+        <div style="float: left; overflow-x: auto; overflow-y: hidden; width: 50%; height: 400px;">
+            <svg width="1800" height="400">
+                <g class="logs" transform="translate(0,0)">
+                    <!-- Logs content -->
+                </g>
+            </svg>
+        </div>
     </div>
+
     <div class="row" style="margin-top: 20px">
         <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-play"
                                            style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
                                            title="Timeline; click to pause/play"></span></a>
         &nbsp;&nbsp;
-        <input id="time" style="width: 650px" data-slider-id='timeSlider' type="text" data-slider-min="0"
+        <input id="time" style="width: 600px" data-slider-id='timeSlider' type="text" data-slider-min="0"
                data-slider-max="1000" data-slider-step="1" data-slider-value="0"/>
     </div>
     <div class="row" id="speed-bar" style="margin-top: 20px">
@@ -305,12 +338,252 @@
     <ul class="dropdown-menu" role="menu">
     </ul>
 </div>
+<h3>System Throughput</h3>
+<div style="width:70%; margin: 10px auto;">
+    <canvas id="throughputChart"></canvas>
+</div>
+<h3>Election Times</h3>
+<div style="width:70%; margin: 10px auto;">
+    <canvas id="electionChart"></canvas>
+</div>
+<h3>Average Response Time</h3>
+<div style="width:70%; margin: 10px auto;">
+    <canvas id="responseTimeChart"></canvas>
+</div>
+<div style="display: flex; justify-content: space-around; width: 100%; margin-top: 20px;">
+    <div style="width: 25%; margin: 10px;">
+        <h3>System Availability</h3>
+        <canvas id="availabilityChart"></canvas>
+    </div>
+    <div style="width: 25%; margin: 10px;">
+        <h3>Request Status</h3>
+        <canvas id="requestChart"></canvas>
+    </div>
+</div>
+
 
 <script>
     window.addEventListener('beforeunload', function (event) {
         event.preventDefault();
         event.returnValue = 'Are you sure you want to leave? Changes you made may not be saved.';
     });
+
+    var ctxThroughput = document.getElementById('throughputChart').getContext('2d');
+    var throughputChart = new Chart(ctxThroughput, {
+        type: 'line',
+        data: {
+            labels: [], // 横坐标时间轴
+            datasets: [{
+                label: 'Average Log Index',
+                data: [], // 数据填充位置
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    ticks: {
+                        // 自定义刻度标签
+                        callback: function(value) {
+                            return value.toFixed(1) + 's';  // 显示到0.1秒
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    var ctxElection = document.getElementById('electionChart').getContext('2d');
+    var electionChart = new Chart(ctxElection, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Majority Term',
+                data: [],
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    ticks: {
+                        // 自定义刻度标签
+                        callback: function(value) {
+                            return value.toFixed(1) + 's';  // 显示到0.1秒
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    var ctxResponseTime = document.getElementById('responseTimeChart').getContext('2d');
+    var responseTimeChart = new Chart(ctxResponseTime, {
+        type: 'line',
+        data: {
+            labels: [], // 横坐标时间轴
+            datasets: [{
+                label: 'Average Response Time (ms)',
+                data: [],
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    ticks: {
+                        // 自定义刻度标签
+                        callback: function(value) {
+                            return value.toFixed(1) + 's';  // 显示到0.1秒
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+
+    var ctxAvailability = document.getElementById('availabilityChart').getContext('2d');
+    var availabilityChart = new Chart(ctxAvailability, {
+        type: 'doughnut',
+        data: {
+            labels: ['Available Time', 'Unavailable Time'],
+            datasets: [{
+                label: 'System Availability Time',
+                data: [0,0], // 转换为秒
+                backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
+                borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var timeInSeconds = context.raw.toFixed(2);
+                            var percentage = ((timeInSeconds * 1000 / metrics.totalTime) * 100).toFixed(2);
+
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += `${timeInSeconds}s (${percentage}%)`;
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    var ctxRequest = document.getElementById('requestChart').getContext('2d');
+    var requestChart = new Chart(ctxRequest, {
+        type: 'doughnut',
+        data: {
+            labels: ['Successful Requests', 'Failed Requests'],
+            datasets: [{
+                label: 'Request Status',
+                data: [0, 0], // 初始数据
+                backgroundColor: ['rgba(54, 162, 235, 0.2)', 'rgba(255, 99, 132, 0.2)'],
+                borderColor: ['rgba(54, 162, 235, 1)', 'rgba(255, 99, 132, 1)'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var count = context.raw;
+                            var percentage = ((count / (metrics.successRequest + metrics.failedRequest)) * 100).toFixed(2);
+
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += `${count} (${percentage}%)`;
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+
+    // 函数更新图表数据
+    function updateChartData(metrics) {
+        availabilityChart.data.datasets[0].data = [metrics.availableTime / 1000, (metrics.totalTime - metrics.availableTime) / 1000]; // 转换为秒
+        availabilityChart.update();
+        requestChart.data.datasets[0].data = [metrics.successRequest, metrics.failedRequest];
+        requestChart.update();
+
+        var currentTimeInSeconds = metrics.totalTime / 1000;
+
+        // 更新有效吞吐量图表
+        var lastDataPoint = throughputChart.data.datasets[0].data.slice(-1)[0];
+        if (!lastDataPoint || (currentTimeInSeconds - lastDataPoint.x >= 0.5)) {
+            // 如果没有最后一个数据点或者时间间隔大于等于1秒，添加新的数据点
+            throughputChart.data.datasets[0].data.push({
+                x: currentTimeInSeconds,
+                y: metrics.averageIndex
+            });
+            throughputChart.update();
+        }
+
+        // 更新选举次数图表
+        lastDataPoint = electionChart.data.datasets[0].data.slice(-1)[0];
+        if (!lastDataPoint || (currentTimeInSeconds - lastDataPoint.x >= 0.5)) {
+            // 如果没有最后一个数据点或者时间间隔大于等于1秒，添加新的数据点
+            electionChart.data.datasets[0].data.push({
+                x: currentTimeInSeconds,
+                y: metrics.maxTerm
+            });
+            electionChart.update();
+        }
+
+        // 更新平均响应时间图表
+        lastDataPoint = responseTimeChart.data.datasets[0].data.slice(-1)[0];
+        if (!lastDataPoint || (currentTimeInSeconds - lastDataPoint.x >= 0.5)) {
+            // 如果没有最后一个数据点或者时间间隔大于等于1秒，添加新的数据点
+            var networkDelayRange = getSettingValue('network-delays', 'custom-network').split('-');
+            var rpcMaxLatency = parseInt(networkDelayRange[1] || networkDelayRange[0], 10);
+            var rpcMinLatency = parseInt(networkDelayRange[0], 10);
+
+
+            responseTimeChart.data.datasets[0].data.push({
+                x: currentTimeInSeconds,
+                y: rpcMinLatency + (rpcMaxLatency-rpcMinLatency) * Math.random()
+            });
+            responseTimeChart.update();
+        }
+    }
+    window.updateChartData = updateChartData;
 </script>
 </body>
 </html>

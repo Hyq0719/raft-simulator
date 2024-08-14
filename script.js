@@ -16,16 +16,27 @@ var record;
 var replay;
 
 var userConfig = {
-  nodeFailureRate: 10,                // 每分钟故障率
+  nodeFailureRate: 0,                // 每分钟故障率
   leaderRequestRate: 30,              // leader每分钟收到的请求数量
-  faultDuration:{min: 10000, max: 20000} // 故障持续时间的最小和最大值
+  faultDuration:{min: 10000, max: 20000}, // 故障持续时间的最小和最大值
+  simulationSpeed: 10,                 // 模拟速度放慢倍率
 };
+
+var metrics = {
+  totalTime: 0,
+  availableTime: 0,
+  maxTerm: 0,
+  successRequest: 0,
+  failedRequest: 0,
+  averageIndex: 0,
+}
 
 function startSimulationFromConfig(config) {
   // Update userConfig with the new configuration passed from HTML
   raft.updateRpcLatency(config.rpcMinLatency*1000,config.rpcMaxLatency*1000)
   userConfig.nodeFailureRate = config.nodeFailureRate;
   userConfig.leaderRequestRate = config.leaderRequestRate;
+  userConfig.simulationSpeed = Math.pow(10, config.simulationSpeed);
   userConfig.faultDuration ={ min: config.minFaultDuration, max: config.maxFaultDuration};
   userConfig.rpcLatency = {min: config.rpcMinLatency*1000, max: config.rpcMaxLatency*1000};
 
@@ -55,7 +66,8 @@ var timers = {
   nodeFailures: {
     id: null,
     start: function() {
-      if (this.id === null) { // 确保定时器未在运行
+      if (this.id === null) {
+        var interval = 1000 * userConfig.simulationSpeed / 2; // Adjusting the base interval by the slow-down factor
         this.id = setInterval(() => {
           if (Math.random() < userConfig.nodeFailureRate / 60) {
             var failedServer = Math.floor(Math.random() * NUM_SERVERS);
@@ -68,10 +80,10 @@ var timers = {
                 if (raft.restart) {
                   raft.restart(state.current, state.current.servers[failedServer]);
                 }
-              }, faultDuration);
+              }, faultDuration * userConfig.simulationSpeed); // Also scale the fault duration
             }
           }
-        }, 1000);
+        }, interval);
       }
     },
     stop: function() {
@@ -85,30 +97,48 @@ var timers = {
     id: null,
     start: function () {
       if (this.id === null) {
-        // 根据每分钟的请求次数计算请求间隔
-        const requestInterval = 60000 / userConfig.leaderRequestRate;
-
+        const requestInterval = 60000 / userConfig.leaderRequestRate * userConfig.simulationSpeed / 2; // Scaling the request interval
         this.id = setInterval(() => {
-          // 尝试找到当前的 leader
-          const leader = getLeader(); // 假设有一个函数 getLeader() 返回当前的 leader 或 null
-          if (leader !== null) {
-            console.log("Sending request to leader", leader.id);
-            // 这里调用发送请求的函数
-            raft.clientRequest(state.current, leader);
-          } else {
-            console.log("Leader not found, request failed.");
-            // 可以设置一个短暂的延迟后再次检查 leader 是否存在
-            setTimeout(() => {
-              const leaderRetry = getLeader();
-              if (leaderRetry !== null) {
-                console.log("Sending request to leader after delay", leaderRetry.id);
-                raft.clientRequest(state.current, leaderRetry);
-              } else {
-                console.log("Leader still not found, request definitely failed.");
-              }
-            }, requestInterval / 2); // 例如在间隔的一半时间后再次尝试
-          }
+          const attemptSendRequest = () => {
+            const leader = getLeader();
+            if (leader !== null) {
+              console.log("Sending request to leader", leader.id);
+              raft.clientRequest(state.current, leader);
+            } else {
+              console.log("Leader not found, request failed.");
+              // Set up a retry logic if leader not found initially
+              setTimeout(() => {
+                const leaderRetry = getLeader();
+                if (leaderRetry !== null) {
+                  console.log("Sending request to leader after delay", leaderRetry.id);
+                  raft.clientRequest(state.current, leaderRetry);
+                } else {
+                  metrics.failedRequest++;
+                  console.log("Leader still not found, retrying at next interval.");
+                }
+              }, requestInterval / 2); // Retry halfway through the interval if initial request failed
+            }
+          };
+          // Try to send a request immediately
+          attemptSendRequest();
+
         }, requestInterval);
+      }
+    },
+    stop: function () {
+      if (this.id !== null) {
+        clearInterval(this.id);
+        this.id = null;
+      }
+    }
+  },
+  chartUpdates: {
+    id: null,
+    start: function () {
+      if (this.id === null) {
+        this.id = setInterval(() => {
+          updateCharts();
+        }, 1000);
       }
     },
     stop: function () {
@@ -140,11 +170,31 @@ function timerAllResume() {
 
 // 初始化所有定时器的函数
 function initializeTimers() {
-  //TODO
   Object.keys(timers).forEach(timerKey => {
     timers[timerKey].start();
   });
   isActive = true; // 标记为激活状态
+}
+
+function updateCharts() {
+  // 更新总时间，假设这里是timeSlider上的值
+  metrics.totalTime = $('#time').slider('getValue') / 1e3; // 将时间单位从微秒转换为秒
+
+  // 更新可用时间，只是示例，实际可能需要其他逻辑
+  metrics.availableTime = metrics.totalTime * (0.9+0.1*Math.random());
+
+  metrics.maxTerm = 0;
+  var sumIndex = 0.0;
+  state.current.servers.forEach(function (server) {
+    if (server.term > metrics.maxTerm) {
+      metrics.maxTerm = server.term;
+    }
+    sumIndex += server.commitIndex;
+  });
+  metrics.averageIndex = sumIndex / NUM_SERVERS;
+
+  // 调用更新图表的函数，这里假设有一个updateChart函数已经定义
+  window.updateChartData(metrics);
 }
 
 $(function () {
@@ -231,7 +281,7 @@ $(function () {
   var svg = $('svg');
 
   var ringSpec = {
-    cx: 210,
+    cx: 220,
     cy: 210,
     r: 150,
   };
@@ -240,9 +290,9 @@ $(function () {
       'scale(' + ringSpec.r / 3.5 + ')');
 
   var logsSpec = {
-    x: 430,
+    x: 0,
     y: 50,
-    width: 320,
+    width: 350,
     height: 270,
   };
 
@@ -272,7 +322,7 @@ $(function () {
                 .attr('class', 'serverid')
                 .text('S' + server.id)
                 .attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
-                    ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
+                    ringSpec.cx, ringSpec.cy, ringSpec.r + 52)))
             .append(SVG('a')
                 .append(SVG('circle')
                     .attr('class', 'background')
@@ -346,11 +396,11 @@ $(function () {
   };
 
   var serverActions = [
-    ['stop', raft.stop],
-    ['resume', raft.resume],
+    ['clientRequest', raft.clientRequest],
+    ['shutdown', raft.stop],
+    // ['resume', raft.resume],
     ['restart', raft.restart],
-    ['time out', raft.timeout],
-    ['request', raft.clientRequest],
+    // ['time out', raft.timeout],
   ];
 
   var messageActions = [
@@ -468,7 +518,7 @@ $(function () {
     var indexes = SVG('g')
         .attr('id', 'log-indexes');
     logsGroup.append(indexes);
-    for (var index = 1; index <= 15; ++index) {
+    for (var index = 1; index <= 60; ++index) {
       var indexEntrySpec = {
         x: indexSpec.x + (index - 0.5) * indexSpec.width / 11,
         y: indexSpec.y,
@@ -506,7 +556,7 @@ $(function () {
                 x: logSpec.x - LABEL_WIDTH * 4 / 5,
                 y: logSpec.y + logSpec.height / 2
               }));
-      for (var index = 1; index <= 15; ++index) {
+      for (var index = 1; index <= 60; ++index) {
         log.append(SVG('rect')
             .attr(logEntrySpec(index))
             .attr('class', 'log'));
@@ -798,9 +848,10 @@ $(function () {
       render.logs();
   };
 
-  (function () {
+  function runSimulation() {
     var last = null;
-    var step = function (timestamp) {
+
+    function step(timestamp) {
       if (!playback.isPaused() && last !== null && timestamp - last < 500) {
         var wallMicrosElapsed = (timestamp - last) * 1000;
         var speed = speedSliderTransform($('#speed').slider('getValue'));
@@ -816,9 +867,13 @@ $(function () {
       }
       last = timestamp;
       window.requestAnimationFrame(step);
-    };
+    }
+
     window.requestAnimationFrame(step);
-  })();
+  }
+  window.runSimulation = runSimulation;
+  runSimulation();
+
 
   $(window).keyup(function (e) {
     if (e.target.id == "title")
@@ -910,7 +965,7 @@ $(function () {
   timeSlider.slider({
     tooltip: 'always',
     formater: function (value) {
-      return (value / 1e5).toFixed(2) + 's';
+      return (value / 1e6).toFixed(2) + 's';
     },
   });
   timeSlider.on('slideStart', function () {
