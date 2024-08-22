@@ -29,7 +29,7 @@
             width: 80%;
         }
 
-        h1 {
+        h2 {
             color: black;
         }
 
@@ -37,13 +37,14 @@
             display: none;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script></head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+</head>
 <body>
-<h1>Raft Consensus Simulator</h1>
+<h2>Raft Consensus Simulator</h2>
 <div class="container">
     <div class="row">
         <!-- Network Delays Dropdown with Input Option -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="input-group">
                 <span class="input-group-addon">Network Delays:</span>
                 <select class="form-control" id="network-delays" onchange="toggleCustomInput(this, 'custom-network')">
@@ -59,15 +60,15 @@
         </div>
 
         <!-- Node Failure Frequencies Dropdown with Input Option -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="input-group">
                 <span class="input-group-addon">Node Failures / min:</span>
                 <select class="form-control" id="node-failures"
                         onchange="toggleCustomInput(this, 'custom-node-failure')">
                     <option value="0">0</option>
                     <option value="5">1</option>
-                    <option value="10" selected>2</option>
-                    <option value="20">4</option>
+                    <option value="10">2</option>
+                    <option value="20" selected>4</option>
                     <option value="60">12</option>
                     <option value="custom">Custom...</option>
                 </select>
@@ -76,7 +77,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="input-group">
                 <span class="input-group-addon">Fault Duration:</span>
                 <select class="form-control" id="fault-duration" onchange="toggleCustomInput(this, 'custom-fault')">
@@ -91,26 +92,25 @@
             </div>
         </div>
 
+    </div>
+    <div class="row" style="margin-top: 10px;">
         <!-- Request Frequencies Dropdown with Input Option -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="input-group">
                 <span class="input-group-addon">Request / min:</span>
                 <select class="form-control" id="request-frequencies"
                         onchange="toggleCustomInput(this, 'custom-request')">
                     <option value="10">10</option>
                     <option value="20">20</option>
-                    <option value="30" selected>30</option>
-                    <option value="60">60</option>
+                    <option value="30">30</option>
+                    <option value="60" selected>60</option>
                     <option value="custom">Custom...</option>
                 </select>
                 <input type="text" id="custom-request" class="form-control" style="display:none;"
                        placeholder="requests per minute">
             </div>
         </div>
-    </div>
-    <div class="row" style="margin-top: 20px;">
-
-        <div class="col-md-3 text-center">
+        <div class="col-md-4 text-center">
             <div class="input-group">
                 <span class="input-group-addon">Simulation Speed:</span>
                 <select class="form-control" id="simulation-speed">
@@ -120,12 +120,24 @@
             </div>
 
         </div>
-        <div class="col-md-9 text-center">
 
+        <div class="col-md-4 text-center">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="hide-heartbeat" style="margin-left: 0;">
+                <label class="form-check-label" for="hide-heartbeat" style="font-size: 1.3rem;">
+                    Hide Heartbeat
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" style="margin-top: 10px;">
+        <div class="text-center">
             <button class="btn btn-primary" onclick="startSimulation()">Start</button>
             <button class="btn btn-secondary" onclick="resetSettings()">Reset</button>
         </div>
     </div>
+
 </div>
 
 <script>
@@ -150,12 +162,12 @@
         document.getElementById('custom-fault').value = '';
 
         // Reset Node Failures
-        document.getElementById('node-failures').value = '10';
+        document.getElementById('node-failures').value = '20';
         document.getElementById('custom-node-failure').style.display = 'none';
         document.getElementById('custom-node-failure').value = '';
 
         // Reset Request Frequencies
-        document.getElementById('request-frequencies').value = '30';
+        document.getElementById('request-frequencies').value = '60';
         document.getElementById('custom-request').style.display = 'none';
         document.getElementById('custom-request').value = '';
 
@@ -387,7 +399,7 @@
                     position: 'bottom',
                     ticks: {
                         // 自定义刻度标签
-                        callback: function(value) {
+                        callback: function (value) {
                             return value.toFixed(1) + 's';  // 显示到0.1秒
                         }
                     }
@@ -419,7 +431,7 @@
                     position: 'bottom',
                     ticks: {
                         // 自定义刻度标签
-                        callback: function(value) {
+                        callback: function (value) {
                             return value.toFixed(1) + 's';  // 显示到0.1秒
                         }
                     }
@@ -452,7 +464,7 @@
                     position: 'bottom',
                     ticks: {
                         // 自定义刻度标签
-                        callback: function(value) {
+                        callback: function (value) {
                             return value.toFixed(1) + 's';  // 显示到0.1秒
                         }
                     }
@@ -474,7 +486,7 @@
             labels: ['Available Time', 'Unavailable Time'],
             datasets: [{
                 label: 'System Availability Time',
-                data: [0,0], // 转换为秒
+                data: [0, 0], // 转换为秒
                 backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
                 borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
                 borderWidth: 1
@@ -484,10 +496,10 @@
             plugins: {
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             var label = context.label || '';
                             var timeInSeconds = context.raw.toFixed(2);
-                            var percentage = ((timeInSeconds * 1000 / metrics.totalTime) * 100).toFixed(2);
+                            var percentage = ((timeInSeconds * 1000 / state.current.metrics.totalTime) * 100).toFixed(2);
 
                             if (label) {
                                 label += ': ';
@@ -518,10 +530,10 @@
             plugins: {
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             var label = context.label || '';
                             var count = context.raw;
-                            var percentage = ((count / (metrics.successRequest + metrics.failedRequest)) * 100).toFixed(2);
+                            var percentage = ((count / (state.current.metrics.successRequest + state.current.metrics.failedRequest)) * 100).toFixed(2);
 
                             if (label) {
                                 label += ': ';
@@ -537,53 +549,31 @@
 
 
     // 函数更新图表数据
-    function updateChartData(metrics) {
-        availabilityChart.data.datasets[0].data = [metrics.availableTime / 1000, (metrics.totalTime - metrics.availableTime) / 1000]; // 转换为秒
-        availabilityChart.update();
-        requestChart.data.datasets[0].data = [metrics.successRequest, metrics.failedRequest];
-        requestChart.update();
-
-        var currentTimeInSeconds = metrics.totalTime / 1000;
-
+    function updateChart(chartData) {
         // 更新有效吞吐量图表
-        var lastDataPoint = throughputChart.data.datasets[0].data.slice(-1)[0];
-        if (!lastDataPoint || (currentTimeInSeconds - lastDataPoint.x >= 0.5)) {
-            // 如果没有最后一个数据点或者时间间隔大于等于1秒，添加新的数据点
-            throughputChart.data.datasets[0].data.push({
-                x: currentTimeInSeconds,
-                y: metrics.averageIndex
-            });
-            throughputChart.update();
-        }
+        throughputChart.data.datasets[0].data = chartData.throughputData;
+        throughputChart.update();
 
         // 更新选举次数图表
-        lastDataPoint = electionChart.data.datasets[0].data.slice(-1)[0];
-        if (!lastDataPoint || (currentTimeInSeconds - lastDataPoint.x >= 0.5)) {
-            // 如果没有最后一个数据点或者时间间隔大于等于1秒，添加新的数据点
-            electionChart.data.datasets[0].data.push({
-                x: currentTimeInSeconds,
-                y: metrics.maxTerm
-            });
-            electionChart.update();
-        }
+        electionChart.data.datasets[0].data = chartData.electionData;
+        electionChart.update();
 
         // 更新平均响应时间图表
-        lastDataPoint = responseTimeChart.data.datasets[0].data.slice(-1)[0];
-        if (!lastDataPoint || (currentTimeInSeconds - lastDataPoint.x >= 0.5)) {
-            // 如果没有最后一个数据点或者时间间隔大于等于1秒，添加新的数据点
-            var networkDelayRange = getSettingValue('network-delays', 'custom-network').split('-');
-            var rpcMaxLatency = parseInt(networkDelayRange[1] || networkDelayRange[0], 10);
-            var rpcMinLatency = parseInt(networkDelayRange[0], 10);
+        responseTimeChart.data.datasets[0].data = chartData.responseTimeData;
+        responseTimeChart.update();
 
+        // 更新系统可用性环形图
+        // 注意：这里假设数组的第一个元素是可用时间，第二个元素是不可用时间
+        availabilityChart.data.datasets[0].data = chartData.availabilityData;
+        availabilityChart.update();
 
-            responseTimeChart.data.datasets[0].data.push({
-                x: currentTimeInSeconds,
-                y: rpcMinLatency + (rpcMaxLatency-rpcMinLatency) * Math.random()
-            });
-            responseTimeChart.update();
-        }
+        // 更新请求状态饼图
+        // 注意：这里假设数组的第一个元素是成功请求，第二个元素是失败请求
+        requestChart.data.datasets[0].data = chartData.requestData;
+        requestChart.update();
     }
-    window.updateChartData = updateChartData;
+
+    window.updateChart = updateChart;
 </script>
 </body>
 </html>

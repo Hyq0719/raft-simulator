@@ -318,7 +318,7 @@ var BATCH_SIZE = 1;
 
   raft.clientRequest = function(model, server) {
     if (server.state == 'leader') {
-      metrics.successRequest++;
+      state.current.metrics.successRequest++;
       server.log.push({term: server.term,
         value: 'v'});
     }

@@ -22,15 +22,6 @@ var userConfig = {
   simulationSpeed: 10,                 // 模拟速度放慢倍率
 };
 
-var metrics = {
-  totalTime: 0,
-  availableTime: 0,
-  maxTerm: 0,
-  successRequest: 0,
-  failedRequest: 0,
-  averageIndex: 0,
-}
-
 function startSimulationFromConfig(config) {
   // Update userConfig with the new configuration passed from HTML
   raft.updateRpcLatency(config.rpcMinLatency*1000,config.rpcMaxLatency*1000)
@@ -113,7 +104,7 @@ var timers = {
                   console.log("Sending request to leader after delay", leaderRetry.id);
                   raft.clientRequest(state.current, leaderRetry);
                 } else {
-                  metrics.failedRequest++;
+                  state.current.metrics.failedRequest++;
                   console.log("Leader still not found, retrying at next interval.");
                 }
               }, requestInterval / 2); // Retry halfway through the interval if initial request failed
@@ -137,7 +128,7 @@ var timers = {
     start: function () {
       if (this.id === null) {
         this.id = setInterval(() => {
-          updateCharts();
+          updateMetrics();
         }, 1000);
       }
     },
@@ -176,25 +167,78 @@ function initializeTimers() {
   isActive = true; // 标记为激活状态
 }
 
-function updateCharts() {
-  // 更新总时间，假设这里是timeSlider上的值
-  metrics.totalTime = $('#time').slider('getValue') / 1e3; // 将时间单位从微秒转换为秒
+function updateMetrics() {
+  state.current.metrics.totalTime = state.current.time / 1e3; // 将时间单位从微秒转换为秒
 
-  // 更新可用时间，只是示例，实际可能需要其他逻辑
-  metrics.availableTime = metrics.totalTime * (0.9+0.1*Math.random());
-
-  metrics.maxTerm = 0;
+  state.current.metrics.maxTerm = 0;
   var sumIndex = 0.0;
   state.current.servers.forEach(function (server) {
-    if (server.term > metrics.maxTerm) {
-      metrics.maxTerm = server.term;
+    if (server.term > state.current.metrics.maxTerm) {
+      state.current.metrics.maxTerm = server.term;
     }
     sumIndex += server.commitIndex;
   });
-  metrics.averageIndex = sumIndex / NUM_SERVERS;
 
-  // 调用更新图表的函数，这里假设有一个updateChart函数已经定义
-  window.updateChartData(metrics);
+
+  state.current.metrics.averageIndex = sumIndex / NUM_SERVERS;
+  var rpcMaxLatency = userConfig.rpcLatency.max/1e3;
+  var rpcMinLatency = userConfig.rpcLatency.min/1e3;
+  state.current.metrics.averageResponseTime = rpcMinLatency + (rpcMaxLatency-rpcMinLatency) * Math.random();
+
+
+  // 更新可用时间，只是示例，实际可能需要其他逻辑
+  var electionTimes = state.current.metrics.maxTerm - 1;
+  state.current.metrics.availableTime = state.current.metrics.totalTime - electionTimes * (rpcMinLatency + (rpcMaxLatency-rpcMinLatency) * (1 - electionTimes/100));
+
+  // 更新图表data
+  updateChartData(state.current.metrics);
+  window.updateChart(state.current.chartData);
+}
+
+function updateChartData(metrics) {
+    var currentTime = state.current.metrics.totalTime; // 假设 totalTime 已更新到当前时间
+    var time = (currentTime / 1000).toFixed(2);
+
+    // 确保每秒最多更新一次数据点
+    const oneSecond = 1000; // 一秒对应的毫秒数
+    var lastThroughputData = state.current.chartData.throughputData.slice(-1)[0];
+    var lastElectionData = state.current.chartData.electionData.slice(-1)[0];
+    var lastResponseTimeData = state.current.chartData.responseTimeData.slice(-1)[0];
+
+    // 更新吞吐量数据
+    if (!lastThroughputData || currentTime - lastThroughputData.x * 1000 >= oneSecond) {
+      state.current.chartData.throughputData.push({
+        x: time,
+        y: state.current.metrics.successRequest
+      });
+    }
+
+    // 更新选举次数数据
+    if (!lastElectionData || currentTime - lastElectionData.x * 1000 >= oneSecond) {
+      state.current.chartData.electionData.push({
+        x: time,
+        y: state.current.metrics.maxTerm
+      });
+    }
+
+    // 更新平均响应时间数据
+    if (!lastResponseTimeData || currentTime - lastResponseTimeData.x * 1000 >= oneSecond) {
+      state.current.chartData.responseTimeData.push({
+        x: time,
+        y: state.current.metrics.averageResponseTime
+      });
+    }
+
+    state.current.chartData.availabilityData = [
+      metrics.availableTime / 1000,
+      (metrics.totalTime - metrics.availableTime) / 1000
+    ];
+
+    // 更新请求状态饼图数据
+    state.current.chartData.requestData = [
+      metrics.successRequest,
+      metrics.failedRequest
+    ];
 }
 
 $(function () {
@@ -214,6 +258,22 @@ $(function () {
   state = makeState({
     servers: [],
     messages: [],
+    chartData: {  // 初始化图表数据存储
+      throughputData: [],
+      electionData: [],
+      responseTimeData: [],
+      availabilityData: [],
+      requestData: []
+    },
+    metrics: {
+      totalTime: 0,
+      availableTime: 0,
+      maxTerm: 0,
+      successRequest: 0,
+      failedRequest: 0,
+      averageIndex: 0,
+      averageResponseTime: 0
+    },
   });
 
   var sliding = false;
@@ -715,42 +775,59 @@ $(function () {
 
   serverModal = function (model, server) {
     var m = $('#modal-details');
-    $('.modal-title', m).text('Server ' + server.id);
+    $('.modal-title', m).text('Server Details - ID: ' + server.id);
     $('.modal-dialog', m).removeClass('modal-sm').addClass('modal-lg');
     var li = function (label, value) {
-      return '<dt>' + label + '</dt><dd>' + value + '</dd>';
+      // 判断value是否为"leader"，如果是，应用特定的样式
+      let valueStyle = value === 'leader' ? 'font-weight-bold text-danger' : '';
+      return `<div class="row mb-1">
+            <div class="col-md-6 text-right font-weight-bold">${label}:</div>
+            <div class="col-md-6 text-left ${valueStyle}">${value}</div>
+          </div>`;
     };
-    var peerTable = $('<table></table>')
-        .addClass('table table-condensed')
-        .append($('<tr></tr>')
-            .append('<th>peer</th>')
-            .append('<th>next index</th>')
-            .append('<th>match index</th>')
-            .append('<th>vote granted</th>')
-            .append('<th>RPC due</th>')
-            .append('<th>heartbeat due</th>')
-        );
-    server.peers.forEach(function (peer) {
-      peerTable.append($('<tr></tr>')
-          .append('<td>S' + peer + '</td>')
-          .append('<td>' + server.nextIndex[peer] + '</td>')
-          .append('<td>' + server.matchIndex[peer] + '</td>')
-          .append('<td>' + server.voteGranted[peer] + '</td>')
-          .append('<td>' + relTime(server.rpcDue[peer], model.time) + '</td>')
-          .append('<td>' + relTime(server.heartbeatDue[peer], model.time) + '</td>')
-      );
-    });
-    $('.modal-body', m)
-        .empty()
-        .append($('<dl class="dl-horizontal"></dl>')
-            .append(li('state', server.state))
-            .append(li('currentTerm', server.term))
-            .append(li('votedFor', server.votedFor))
-            .append(li('commitIndex', server.commitIndex))
-            .append(li('electionAlarm', relTime(server.electionAlarm, model.time)))
-            .append($('<dt>peers</dt>'))
-            .append($('<dd></dd>').append(peerTable))
-        );
+
+
+    var peerTableRows = server.peers.map(peer => `
+<tr>
+    <td>S${peer}</td>
+    <td>${server.nextIndex[peer]}</td>
+    <td>${server.matchIndex[peer]}</td>
+    <td>${server.voteGranted[peer] ? 'Yes' : 'No'}</td>
+<!--    <td>${relTime(server.rpcDue[peer], model.time)}</td>-->
+    <td>${relTime(server.heartbeatDue[peer], model.time)}</td>
+</tr>
+`).join('');
+
+    var modalContent = `
+    <div class="card border-secondary mb-3">
+        <div class="card-body text-secondary">
+            ${li('State', server.state)}
+            ${li('Current Term', server.term)}
+            ${li('Voted For', server.votedFor)}
+            ${li('Commit Index', server.commitIndex)}
+            ${server.state === 'leader' ? `
+            <table class="table table-hover">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Peer</th>
+                        <th>Next Index</th>
+                        <th>Match Index</th>
+                        <th>Vote Granted</th>
+<!--                        <th>RPC Due</th>-->
+                        <th>Heartbeat Due</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${peerTableRows}
+                </tbody>
+            </table>` : ''}
+        </div>
+    </div>
+`;
+
+
+    $('.modal-body', m).html(modalContent);
+    m.modal();
     var footer = $('.modal-footer', m);
     footer.empty();
     serverActions.forEach(function (action) {
@@ -763,8 +840,8 @@ $(function () {
             m.modal('hide');
           }));
     });
-    m.modal();
   };
+
 
   messageModal = function (model, message) {
     var m = $('#modal-details');
@@ -846,6 +923,7 @@ $(function () {
     render.messages(messagesSame);
     if (!serversSame)
       render.logs();
+    window.updateChart(state.current.chartData);
   };
 
   function runSimulation() {
